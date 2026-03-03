@@ -14,7 +14,7 @@ spec:
   env:
     - name: ANALYTICS_TOKEN
       value: change-me
-  port: 8000
+  port: 3000
   imagePullPolicy: Always
   orgId: fintlabs.no
   image: ghcr.io/fintlabs/fint-analytics-frontend
