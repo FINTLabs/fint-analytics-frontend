@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [ rewrite ]
+    branches: [ first ]
   repository_dispatch:
     types: [trigger-cd]
 
