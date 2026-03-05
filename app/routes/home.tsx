@@ -1,20 +1,13 @@
 import type {Route} from "./+types/home";
-import {Box, Button, HGrid, HStack, InfoCard, Popover, Table} from "@navikt/ds-react";
+import {Box, HGrid, InfoCard} from "@navikt/ds-react";
 import {useLoaderData} from "react-router";
-import {
-  type AnalyticsEvent,
-  getLatestEvents,
-  type TotalEventsPerAppWithTypesRow,
-  type TotalEventsPerTenantRow,
-} from "~/server/analytics.repo";
-import {type MouseEvent, type ReactElement, useState} from "react";
-import {
-  ExclamationmarkTriangleIcon,
-  FileCodeIcon,
-  FingerButtonIcon,
-  MagnifyingGlassCheckmarkIcon,
-} from "@navikt/aksel-icons";
-import {formatTs} from "~/utils/time";
+import { getLatestEvents } from "~/server/analytics.repo";
+import type {
+  AnalyticsEvent,
+  TotalEventsPerAppWithTypesRow,
+  TotalEventsPerTenantRow,
+} from "~/types/analytics";
+import EventsTable from "~/components/EventsTable";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -46,62 +39,6 @@ export default function Home() {
     totalEventsPerApp: TotalEventsPerAppWithTypesRow[];
     totalEventsPerTenant: TotalEventsPerTenantRow[];
   }>();
-
-  const [openPopoverId, setOpenPopoverId] = useState<number | null>(null);
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-
-  const handlePopoverToggle = (
-    event: MouseEvent<HTMLButtonElement>,
-    rowId: number,
-  ) => {
-    if (openPopoverId === rowId) {
-      setOpenPopoverId(null);
-      setAnchorEl(null);
-      return;
-    }
-
-    setAnchorEl(event.currentTarget);
-    setOpenPopoverId(rowId);
-  };
-
-  const handlePopoverClose = () => {
-    setOpenPopoverId(null);
-    setAnchorEl(null);
-  };
-
-  const getTypeIcon = (
-    type: string,
-    fontSize = "1.5rem",
-  ): ReactElement => {
-    switch (type) {
-      case "page_view":
-        return (
-          <FileCodeIcon
-            aria-hidden
-            fontSize={fontSize}
-            color="var(--ax-bg-success-strong)"
-          />
-        );
-      case "button_click":
-        return (
-          <FingerButtonIcon
-            aria-hidden
-            fontSize={fontSize}
-            color="var(--ax-bg-brand-blue-strong)"
-          />
-        );
-      case "search":
-        return (
-          <MagnifyingGlassCheckmarkIcon
-            aria-hidden
-            fontSize={fontSize}
-            color="var(--ax-bg-meta-purple-strong)"
-          />
-        );
-      default:
-        return <ExclamationmarkTriangleIcon aria-hidden fontSize={fontSize} color="var(--ax-bg-danger-strong)"/>;
-    }
-  };
 
   return (
     <>
@@ -146,66 +83,7 @@ export default function Home() {
       </HGrid>
 
       <Box>
-        <Table zebraStripes={true}>
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell>Type</Table.HeaderCell>
-              <Table.HeaderCell>Time</Table.HeaderCell>
-              <Table.HeaderCell>App</Table.HeaderCell>
-              <Table.HeaderCell>Path</Table.HeaderCell>
-              <Table.HeaderCell>Element</Table.HeaderCell>
-              <Table.HeaderCell>Tenant</Table.HeaderCell>
-              <Table.HeaderCell>Meta</Table.HeaderCell>
-            </Table.Row>
-          </Table.Header>
-
-          <Table.Body>
-            {rows.map((row) => (
-              <Table.Row key={row.id}>
-                <Table.DataCell>
-                  <HStack gap={"space-2"} align={"center"}>
-                  {getTypeIcon(row.type)}
-                  {row.type}
-                  </HStack>
-                </Table.DataCell>
-                <Table.DataCell>
-                  {formatTs(row.ts)}
-                </Table.DataCell>
-                <Table.DataCell>{row.app}</Table.DataCell>
-                <Table.DataCell>{row.path ?? "-"}</Table.DataCell>
-                <Table.DataCell>{row.element ?? "-"}</Table.DataCell>
-                <Table.DataCell>{row.tenant ?? "-"}</Table.DataCell>
-                <Table.DataCell>
-                  {row.meta && (
-                    <>
-                      <Popover
-                        open={openPopoverId === row.id}
-                        onClose={handlePopoverClose}
-                        anchorEl={anchorEl}
-                        id={row.id.toString()}
-                      >
-                        <Popover.Content>
-                          {row.meta ? JSON.stringify(row.meta) : "-"}
-                        </Popover.Content>
-                      </Popover>
-                      <Button
-                        onClick={(event) => handlePopoverToggle(event, row.id)}
-                        aria-expanded={openPopoverId === row.id}
-                        aria-controls={
-                          openPopoverId === row.id ? row.id.toString() : undefined
-                        }
-                        size={"small"}
-                        variant={"tertiary"}
-                      >
-                        View
-                      </Button>
-                    </>
-                  )}
-                </Table.DataCell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
+        <EventsTable events={rows} emptyMessage="No events yet" />
       </Box>
     </>
   );

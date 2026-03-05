@@ -1,37 +1,29 @@
 // import {db, query} from "~/server/db.server";
+import type {
+    AnalyticsEvent,
+    AppDashboardSummary,
+    AppViewsSummary,
+    IncomingEvent,
+    TenantDashboardSummary,
+    TenantViewsSummary,
+} from "~/types/analytics";
+export type {
+    AnalyticsEvent,
+    AppDashboardSummary,
+    AppViewsSummary,
+    EventsByType,
+    HitsPerDayByAppRow,
+    IncomingEvent,
+    PageViewsRow,
+    TenantDashboardSummary,
+    TenantViewsSummary,
+    TotalEventsPerAppWithTypesRow,
+    TotalEventsPerTenantRow,
+} from "~/types/analytics";
 
-export type PageViewsRow = {
-    app: string;
-    path: string;
-    views: number;
-};
+//TODO: clean up types
+//TODO: make 1 copy for POC cache, one for DB
 
-export type HitsPerDayByAppRow = {
-    day: string;
-    app: string;
-    hits: number;
-};
-
-export type AnalyticsEvent = {
-    id: number;
-    ts: string;
-    app: string;
-    type: string;
-    path: string | null;
-    element: string | null;
-    tenant: string | null;
-    meta?: Record<string, unknown>;
-};
-
-export type IncomingEvent = {
-    ts?: string; // optional; default now
-    app: string;
-    type: "page_view" | "button_click" | "search";
-    path?: string;
-    element?: string;
-    tenant?: string;
-    meta?: Record<string, unknown>;
-};
 
 // export async function getPageViewsByAppAndPath(params: {
 //     from: Date;
@@ -76,16 +68,6 @@ export type IncomingEvent = {
 //     );
 // }
 
-export interface EventsByType {
-    type: string;
-    events: number;
-}
-
-export interface TotalEventsPerAppWithTypesRow {
-    app: string;
-    total_events: number;
-    by_type: EventsByType[]; // returned from jsonb
-}
 
 // export async function getTotalEventsPerAppWithTypes(params: {
 //     from: Date;
@@ -161,10 +143,6 @@ export interface TotalEventsPerAppWithTypesRow {
 //     );
 // }
 
-export interface TotalEventsPerTenantRow {
-    tenant: string;
-    events: number;
-}
 
 // export async function getTotalEventsPerTenant(params: {
 //     from: Date;
@@ -259,6 +237,191 @@ export async function getLatestEvents(limit = 50) {
 
     var returnSorted = listOfEvents.sort((a, b) => (a.ts > b.ts ? -1 : 1));
     return returnSorted.slice(0, limit);
+}
+
+export async function listApps() {
+    return Array.from(new Set(listOfEvents.map((event) => event.app))).sort((a, b) =>
+        a.localeCompare(b)
+    );
+}
+
+export async function getAppViewsSummary(params: {
+    from: Date;
+    to: Date;
+}): Promise<AppViewsSummary[]> {
+    const { from, to } = params;
+    const counts = new Map<string, number>();
+
+    for (const event of listOfEvents) {
+        const ts = new Date(event.ts);
+        if (Number.isNaN(ts.getTime())) continue;
+        if (ts < from || ts >= to) continue;
+        if (event.type !== "page_view") continue;
+
+        counts.set(event.app, (counts.get(event.app) ?? 0) + 1);
+    }
+
+    const apps = await listApps();
+    return apps
+        .map((app) => ({
+            app,
+            totalViews: counts.get(app) ?? 0,
+        }))
+        .sort((a, b) => b.totalViews - a.totalViews || a.app.localeCompare(b.app));
+}
+
+export async function listTenants() {
+    return Array.from(
+        new Set(
+            listOfEvents
+                .map((event) => event.tenant)
+                .filter((tenant): tenant is string => Boolean(tenant))
+        )
+    ).sort((a, b) => a.localeCompare(b));
+}
+
+export async function getTenantViewsSummary(params: {
+    from: Date;
+    to: Date;
+}): Promise<TenantViewsSummary[]> {
+    const { from, to } = params;
+    const counts = new Map<string, number>();
+
+    for (const event of listOfEvents) {
+        const ts = new Date(event.ts);
+        if (Number.isNaN(ts.getTime())) continue;
+        if (ts < from || ts >= to) continue;
+        if (event.type !== "page_view") continue;
+        if (!event.tenant) continue;
+
+        counts.set(event.tenant, (counts.get(event.tenant) ?? 0) + 1);
+    }
+
+    const tenants = await listTenants();
+    return tenants
+        .map((tenant) => ({
+            tenant,
+            totalViews: counts.get(tenant) ?? 0,
+        }))
+        .sort((a, b) => b.totalViews - a.totalViews || a.tenant.localeCompare(b.tenant));
+}
+
+export async function getAppDashboardSummary(params: {
+    app: string;
+    from: Date;
+    to: Date;
+}): Promise<AppDashboardSummary> {
+    const { app, from, to } = params;
+    const filtered = listOfEvents
+        .filter((event) => {
+            if (event.app !== app) return false;
+            const ts = new Date(event.ts);
+            if (Number.isNaN(ts.getTime())) return false;
+            return ts >= from && ts < to;
+        })
+        .sort((a, b) => (a.ts > b.ts ? -1 : 1));
+
+    const pathCounts = new Map<string, number>();
+    const elementCounts = new Map<string, number>();
+    const tenants = new Set<string>();
+
+    let pageViews = 0;
+    let buttonClicks = 0;
+    let searches = 0;
+
+    for (const event of filtered) {
+        if (event.type === "page_view") pageViews += 1;
+        if (event.type === "button_click") buttonClicks += 1;
+        if (event.type === "search") searches += 1;
+
+        if (event.path) {
+            pathCounts.set(event.path, (pathCounts.get(event.path) ?? 0) + 1);
+        }
+
+        if (event.element) {
+            elementCounts.set(event.element, (elementCounts.get(event.element) ?? 0) + 1);
+        }
+
+        if (event.tenant) {
+            tenants.add(event.tenant);
+        }
+    }
+
+    const toTopRows = (entries: Map<string, number>) =>
+        Array.from(entries.entries())
+            .map(([value, events]) => ({ value, events }))
+            .sort((a, b) => b.events - a.events || a.value.localeCompare(b.value))
+            .slice(0, 10);
+
+    return {
+        app,
+        totalEvents: filtered.length,
+        pageViews,
+        buttonClicks,
+        searches,
+        uniqueTenants: tenants.size,
+        topPaths: toTopRows(pathCounts),
+        topElements: toTopRows(elementCounts),
+        latestEvents: filtered.slice(0, 15),
+    };
+}
+
+export async function getTenantDashboardSummary(params: {
+    tenant: string;
+    from: Date;
+    to: Date;
+}): Promise<TenantDashboardSummary> {
+    const { tenant, from, to } = params;
+    const filtered = listOfEvents
+        .filter((event) => {
+            if (event.tenant !== tenant) return false;
+            const ts = new Date(event.ts);
+            if (Number.isNaN(ts.getTime())) return false;
+            return ts >= from && ts < to;
+        })
+        .sort((a, b) => (a.ts > b.ts ? -1 : 1));
+
+    const pathCounts = new Map<string, number>();
+    const elementCounts = new Map<string, number>();
+    const apps = new Set<string>();
+
+    let pageViews = 0;
+    let buttonClicks = 0;
+    let searches = 0;
+
+    for (const event of filtered) {
+        if (event.type === "page_view") pageViews += 1;
+        if (event.type === "button_click") buttonClicks += 1;
+        if (event.type === "search") searches += 1;
+
+        if (event.path) {
+            pathCounts.set(event.path, (pathCounts.get(event.path) ?? 0) + 1);
+        }
+
+        if (event.element) {
+            elementCounts.set(event.element, (elementCounts.get(event.element) ?? 0) + 1);
+        }
+
+        apps.add(event.app);
+    }
+
+    const toTopRows = (entries: Map<string, number>) =>
+        Array.from(entries.entries())
+            .map(([value, events]) => ({ value, events }))
+            .sort((a, b) => b.events - a.events || a.value.localeCompare(b.value))
+            .slice(0, 10);
+
+    return {
+        tenant,
+        totalEvents: filtered.length,
+        pageViews,
+        buttonClicks,
+        searches,
+        uniqueApps: apps.size,
+        topPaths: toTopRows(pathCounts),
+        topElements: toTopRows(elementCounts),
+        latestEvents: filtered.slice(0, 15),
+    };
 }
 const listOfEvents: AnalyticsEvent[] = [];
 let nextId = 1;

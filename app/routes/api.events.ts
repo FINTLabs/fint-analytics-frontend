@@ -1,5 +1,6 @@
 import { data, type ActionFunctionArgs } from "react-router";
-import { insertEvents, type IncomingEvent } from "~/server/analytics.repo";
+import { insertEvents } from "~/server/analytics.repo";
+import type { IncomingEvent } from "~/types/analytics";
 
 function corsHeaders(request: Request): Headers {
   const headers = new Headers();
@@ -16,6 +17,7 @@ function corsHeaders(request: Request): Headers {
   return headers;
 }
 
+//TODO: check for double events
 export async function loader({ request }: { request: Request }) {
   if (request.method === "OPTIONS") {
     return new Response(null, {
