@@ -5,28 +5,56 @@ declare global {
     var __dbPool: Pool | undefined;
 }
 
+function getEnv(...keys: string[]): string | undefined {
+    for (const key of keys) {
+        const value = process.env[key];
+        if (value && value.trim().length > 0) return value;
+    }
+    return undefined;
+}
+
 function normalizeConnectionString(value: string): string {
     const withoutJdbcPrefix = value.replace(/^jdbc:/, "");
+    const url = new URL(withoutJdbcPrefix);
+
+    const username =
+        getEnv("DATABASE_USERNAME", "DB_USER", "PGUSER", "fint.database.username", "FINT_DATABASE_USERNAME") ??
+        url.searchParams.get("ApplicationName") ??
+        undefined;
+    const password = getEnv(
+        "DATABASE_PASSWORD",
+        "DB_PASSWORD",
+        "PGPASSWORD",
+        "fint.database.password",
+        "FINT_DATABASE_PASSWORD"
+    );
+
+    if (!url.username && username) {
+        url.username = username;
+    }
+    if (!url.password && password) {
+        url.password = password;
+    }
 
     // Managed PostgreSQL providers often expose `sslmode=require`.
     // pg currently interprets that more strictly than libpq unless `uselibpqcompat=true`.
     if (
-        withoutJdbcPrefix.includes("sslmode=require") &&
-        !withoutJdbcPrefix.includes("uselibpqcompat=")
+        url.searchParams.get("sslmode") === "require" &&
+        !url.searchParams.has("uselibpqcompat")
     ) {
-        const separator = withoutJdbcPrefix.includes("?") ? "&" : "?";
-        return `${withoutJdbcPrefix}${separator}uselibpqcompat=true`;
+        url.searchParams.set("uselibpqcompat", "true");
     }
 
-    return withoutJdbcPrefix;
+    return url.toString();
 }
 
 export function db() {
     if (!global.__dbPool) {
-        const rawConnectionString =
-            process.env.DATABASE_URL ?? process.env["fint.database.url"];
-        const user = process.env["fint.database.username"];
-        const password = process.env["fint.database.password"];
+        const rawConnectionString = getEnv(
+            "DATABASE_URL",
+            "fint.database.url",
+            "FINT_DATABASE_URL"
+        );
 
         if (!rawConnectionString) {
             throw new Error(
@@ -37,8 +65,6 @@ export function db() {
 
         global.__dbPool = new Pool({
             connectionString,
-            user,
-            password,
         });
     }
     return global.__dbPool;
