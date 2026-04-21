@@ -1,5 +1,6 @@
 import { data, type ActionFunctionArgs } from "react-router";
 import { insertEvents } from "~/server/analytics.repo";
+import { notifySlackOnErrorSpike } from "~/server/slack-alerts.server";
 import type { IncomingEvent } from "~/types/analytics";
 
 function corsHeaders(request: Request): Headers {
@@ -16,6 +17,8 @@ function corsHeaders(request: Request): Headers {
 
   return headers;
 }
+
+const ALLOWED_EVENT_TYPES = new Set(["page_view", "button_click", "search", "error"]);
 
 //TODO: check for double events
 export async function loader({ request }: { request: Request }) {
@@ -58,6 +61,8 @@ export async function action({ request }: ActionFunctionArgs) {
   for (const e of events) {
     if (!e?.app || !e?.type)
       return new Response("Bad Request: missing app or type", { status: 400 });
+    if (!ALLOWED_EVENT_TYPES.has(e.type))
+      return new Response("Bad Request: invalid event type", { status: 400 });
     if (e.app.length > 80)
       return new Response("Bad Request: app name too long", { status: 400 });
     if (e.path && e.path.length > 200)
@@ -76,6 +81,7 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   await insertEvents(events);
+  await notifySlackOnErrorSpike(events);
 
   return data(
       { ok: true, inserted: events.length },

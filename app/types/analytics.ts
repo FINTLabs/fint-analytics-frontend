@@ -30,7 +30,7 @@ export type AnalyticsEvent = {
 export type IncomingEvent = {
   ts?: string;
   app: string;
-  type: "page_view" | "button_click" | "search";
+  type: "page_view" | "button_click" | "search" | "error";
   path?: string;
   element?: string;
   tenant?: string;
