@@ -23,6 +23,7 @@ import DateRangeActionMenu, {
   parseDashboardRange,
 } from "~/components/DateRangeActionMenu";
 import type { DashboardRange } from "~/types/dashboard";
+import { formatPath } from "~/utils/path";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -155,7 +156,10 @@ export default function DashboardRoute() {
           <DashboardTopTables
             leftTitle="Top pages"
             leftLabel="Path"
-            leftRows={summary.topPaths}
+            leftRows={summary.topPaths.map((row) => ({
+              ...row,
+              value: formatPath(row.value),
+            }))}
             leftEmptyMessage="No paths in period"
             rightTitle="Top elements"
             rightLabel="Element"

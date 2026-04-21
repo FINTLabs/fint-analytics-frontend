@@ -7,6 +7,7 @@ import {
 } from "@navikt/aksel-icons";
 import { type MouseEvent, type ReactElement, useState } from "react";
 import type { AnalyticsEvent } from "~/types/analytics";
+import { formatPath } from "~/utils/path";
 import { formatTs } from "~/utils/time";
 
 type EventsTableProps = {
@@ -50,16 +51,6 @@ function getTypeIcon(type: string, fontSize = "1.5rem"): ReactElement {
           color="var(--ax-bg-danger-strong)"
         />
       );
-  }
-}
-
-function formatPath(path?: string | null): string {
-  if (!path) return "-";
-
-  try {
-    return decodeURIComponent(path);
-  } catch {
-    return path;
   }
 }
 
