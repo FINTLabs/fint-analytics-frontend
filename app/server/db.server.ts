@@ -5,19 +5,35 @@ declare global {
     var __dbPool: Pool | undefined;
 }
 
+function normalizeConnectionString(value: string): string {
+    const withoutJdbcPrefix = value.replace(/^jdbc:/, "");
+
+    // Managed PostgreSQL providers often expose `sslmode=require`.
+    // pg currently interprets that more strictly than libpq unless `uselibpqcompat=true`.
+    if (
+        withoutJdbcPrefix.includes("sslmode=require") &&
+        !withoutJdbcPrefix.includes("uselibpqcompat=")
+    ) {
+        const separator = withoutJdbcPrefix.includes("?") ? "&" : "?";
+        return `${withoutJdbcPrefix}${separator}uselibpqcompat=true`;
+    }
+
+    return withoutJdbcPrefix;
+}
+
 export function db() {
     if (!global.__dbPool) {
-        const connectionString =
-            process.env.DATABASE_URL ??
-            process.env["fint.database.url"]?.replace(/^jdbc:/, "");
+        const rawConnectionString =
+            process.env.DATABASE_URL ?? process.env["fint.database.url"];
         const user = process.env["fint.database.username"];
         const password = process.env["fint.database.password"];
 
-        if (!connectionString) {
+        if (!rawConnectionString) {
             throw new Error(
                 "DATABASE_URL is not set (and no fint.database.url was provided)"
             );
         }
+        const connectionString = normalizeConnectionString(rawConnectionString);
 
         global.__dbPool = new Pool({
             connectionString,
