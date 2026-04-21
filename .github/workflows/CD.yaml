@@ -1,6 +1,8 @@
 name: CD
 
 on:
+  push:
+    branches: [main]
   repository_dispatch:
     types: [trigger-cd]
 
@@ -29,13 +31,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
-        uses: docker/metadata-action@v5
         id: meta
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,enable=true,priority=100,prefix=sha-,suffix=,format=short
-            latest
+            type=sha,prefix={{date 'YYYY.MM.DD-HH.mm'}}-,priority=9002
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -57,10 +58,7 @@ jobs:
         org:
           - fintlabs-no
         cluster:
-          #          - aks-alpha-fint-2021-11-18
           - aks-beta-fint-2021-11-23
-          #          - aks-api-fint-2022-02-08
-          #          - aks-pwf-fint-2021-10-20
 
     steps:
       - name: Checkout repository
@@ -84,29 +82,32 @@ jobs:
         id: bake
         uses: azure/k8s-bake@v2
         with:
-          renderEngine: 'kustomize'
-          kustomizationPath: 'kustomize/overlays/${{ steps.environment.outputs.result }}'
+          renderEngine: "kustomize"
+          kustomizationPath: "kustomize/overlays/${{ steps.environment.outputs.result }}"
 
-      - uses: azure/login@v1
+      - name: Substitute image into baked YAML
+        id: substitute
+        uses: azure/k8s-artifact-substitute@v2.0.0
+        with:
+          manifests: ${{ steps.bake.outputs.manifestsBundle }}
+          images: ${{ needs.build-and-push.outputs.tags }}
+
+      - uses: azure/login@v2.3.0
         with:
           creds: "${{ secrets[format('AKS_{0}_FINT_GITHUB', steps.environment.outputs.result)] }}"
 
-      - uses: azure/use-kubelogin@v1.1
-        with:
-          kubelogin-version: 'v0.0.26'
-
       - name: Set the target cluster
-        uses: azure/aks-set-context@v3
+        uses: azure/aks-set-context@v4.0.3
         with:
-          cluster-name: '${{ matrix.cluster }}'
-          resource-group: '${{ steps.resource-group.outputs.result }}'
-          admin: 'true'
-          use-kubelogin: 'true'
+          cluster-name: "${{ matrix.cluster }}"
+          resource-group: "${{ steps.resource-group.outputs.result }}"
+          admin: "true"
+          use-kubelogin: "true"
 
       - name: Deploy
-        uses: azure/k8s-deploy@v4.9
+        uses: azure/k8s-deploy@v5.0.4
         with:
           action: deploy
-          manifests: ${{ steps.bake.outputs.manifestsBundle }}
+          manifests: ${{ steps.substitute.outputs.manifests }}
           images: ${{ needs.build-and-push.outputs.tags }}
           namespace: ${{ matrix.org }}
