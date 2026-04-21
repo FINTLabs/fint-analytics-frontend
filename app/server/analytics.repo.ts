@@ -1,511 +1,361 @@
-// import {db, query} from "~/server/db.server";
+import { query } from "~/server/db.server";
 import type {
-    AnalyticsEvent,
-    AppDashboardSummary,
-    AppViewsSummary,
-    IncomingEvent,
-    PageViewsByDayAppRow,
-    TenantDashboardSummary,
-    TenantViewsSummary,
+  AnalyticsEvent,
+  AppDashboardSummary,
+  AppViewsSummary,
+  IncomingEvent,
+  PageViewsByDayAppRow,
+  TenantDashboardSummary,
+  TenantViewsSummary,
 } from "~/types/analytics";
+
 export type {
-    AnalyticsEvent,
-    AppDashboardSummary,
-    AppViewsSummary,
-    EventsByType,
-    HitsPerDayByAppRow,
-    IncomingEvent,
-    PageViewsRow,
-    PageViewsByDayAppRow,
-    TenantDashboardSummary,
-    TenantViewsSummary,
-    TotalEventsPerAppWithTypesRow,
-    TotalEventsPerTenantRow,
+  AnalyticsEvent,
+  AppDashboardSummary,
+  AppViewsSummary,
+  EventsByType,
+  HitsPerDayByAppRow,
+  IncomingEvent,
+  PageViewsRow,
+  PageViewsByDayAppRow,
+  TenantDashboardSummary,
+  TenantViewsSummary,
+  TotalEventsPerAppWithTypesRow,
+  TotalEventsPerTenantRow,
 } from "~/types/analytics";
 
-//TODO: clean up types
-//TODO: make 1 copy for POC cache, one for DB
+type DbEventRow = {
+  id: number;
+  ts: Date | string;
+  app: string;
+  type: string;
+  path: string | null;
+  element: string | null;
+  tenant: string | null;
+  meta: Record<string, unknown> | null;
+};
 
-
-// export async function getPageViewsByAppAndPath(params: {
-//     from: Date;
-//     to: Date;     // exclusive end
-//     app?: string; // optional filter
-// }) {
-//     const { from, to, app } = params;
-//
-//     if (app) {
-//         return query<PageViewsRow>(
-//             `
-//       select
-//         app,
-//         coalesce(path, '/__unknown__') as path,
-//         count(*)::int as views
-//       from analytics_event
-//       where type = 'page_view'
-//         and app = $1
-//         and ts >= $2::timestamptz
-//         and ts <  $3::timestamptz
-//       group by app, path
-//       order by views desc
-//       `,
-//             [app, from.toISOString(), to.toISOString()]
-//         );
-//     }
-//
-//     return query<PageViewsRow>(
-//         `
-//     select
-//       app,
-//       coalesce(path, '/__unknown__') as path,
-//       count(*)::int as views
-//     from analytics_event
-//     where type = 'page_view'
-//       and ts >= $1::timestamptz
-//       and ts <  $2::timestamptz
-//     group by app, path
-//     order by views desc
-//     `,
-//         [from.toISOString(), to.toISOString()]
-//     );
-// }
-
-
-// export async function getTotalEventsPerAppWithTypes(params: {
-//     from: Date;
-//     to: Date; // exclusive
-// }) {
-//     const { from, to } = params;
-//
-//     return query<TotalEventsPerAppWithTypesRow>(
-//         `
-//     with per_type as (
-//       select
-//         app,
-//         type,
-//         count(*)::int as events
-//       from analytics_event
-//       where ts >= $1::timestamptz
-//         and ts <  $2::timestamptz
-//       group by 1, 2
-//     ),
-//     totals as (
-//       select
-//         app,
-//         count(*)::int as total_events
-//       from analytics_event
-//       where ts >= $1::timestamptz
-//         and ts <  $2::timestamptz
-//       group by 1
-//     )
-//     select
-//       t.app,
-//       t.total_events,
-//       coalesce(
-//         jsonb_agg(
-//           jsonb_build_object('type', p.type, 'events', p.events)
-//           order by p.events desc, p.type asc
-//         ) filter (where p.type is not null),
-//         '[]'::jsonb
-//       ) as by_type
-//     from totals t
-//     left join per_type p on p.app = t.app
-//     group by t.app, t.total_events
-//     order by t.total_events desc, t.app asc
-//     `,
-//         [from.toISOString(), to.toISOString()]
-//     );
-// }
-
-// export interface TotalEventsPerAppRow {
-//     app: string;
-//     events: number;
-// }
-//
-// export async function getTotalEventsPerApp(params: {
-//     from: Date;
-//     to: Date;     // exclusive end
-//     app?: string; // optional filter
-// }) {
-//     const { from, to, app } = params;
-//
-//     return query<TotalEventsPerAppRow>(
-//         `
-//     select
-//       app,
-//       count(*)::int as events
-//     from analytics_event
-//     where ($1::text is null or app = $1::text)
-//       and ts >= $2::timestamptz
-//       and ts <  $3::timestamptz
-//     group by 1
-//     order by 2 desc, 1 asc
-//     `,
-//         [app ?? null, from.toISOString(), to.toISOString()]
-//     );
-// }
-
-
-// export async function getTotalEventsPerTenant(params: {
-//     from: Date;
-//     to: Date;        // exclusive end
-//     tenant?: string; // optional filter
-//
-// }) {
-//     const { from, to, tenant } = params;
-//
-//     return query<TotalEventsPerTenantRow>(
-//         `
-//     select
-//       tenant,
-//       count(*)::int as events
-//     from analytics_event
-//     where ($1::text is null or tenant = $1::text)
-//       and ts >= $2::timestamptz
-//       and ts <  $3::timestamptz
-//     group by 1
-//     order by 2 desc, 1 asc
-//     `,
-//         [tenant ?? null, from.toISOString(), to.toISOString()]
-//     );
-// }
-
-// export async function getHitsPerDayByApp(params: {
-//     from: Date;
-//     to: Date;     // exclusive end
-//     app?: string; // optional filter
-// }) {
-//     const { from, to, app } = params;
-//
-//     if (app) {
-//         return query<HitsPerDayByAppRow>(
-//             `
-//       select
-//         date_trunc('day', ts)::date::text as day,
-//         app,
-//         count(*)::int as hits
-//       from analytics_event
-//       where app = $1
-//         and ts >= $2::timestamptz
-//         and ts <  $3::timestamptz
-//       group by 1, 2
-//       order by 1 asc, 2 asc
-//       `,
-//             [app, from.toISOString(), to.toISOString()]
-//         );
-//     }
-//
-//     return query<HitsPerDayByAppRow>(
-//         `
-//     select
-//       date_trunc('day', ts)::date::text as day,
-//       app,
-//       count(*)::int as hits
-//     from analytics_event
-//     where ts >= $1::timestamptz
-//       and ts <  $2::timestamptz
-//     group by 1, 2
-//     order by 1 asc, 2 asc
-//     `,
-//         [from.toISOString(), to.toISOString()]
-//     );
-// }
-
-// export type AppRow = { app: string };
-//
-// export async function listApps() {
-//     return query<AppRow>(
-//         `
-//     select distinct app
-//     from analytics_event
-//     order by app asc
-//     `
-//     );
-// }
-
-
-
-//TODO: POC cache HERE
-export async function getLatestEvents(limit = 50) {
-    // return query<AnalyticsEvent>(
-    //     `
-    // select id, ts, app, type, path, element, tenant, meta
-    // from analytics_event
-    // order by ts desc
-    // limit $1
-    // `,
-    //     [limit]
-    // );
-
-    var returnSorted = listOfEvents.sort((a, b) => (a.ts > b.ts ? -1 : 1));
-    return returnSorted.slice(0, limit);
+function toAnalyticsEvent(row: DbEventRow): AnalyticsEvent {
+  return {
+    id: row.id,
+    ts: row.ts instanceof Date ? row.ts.toISOString() : new Date(row.ts).toISOString(),
+    app: row.app,
+    type: row.type,
+    path: row.path,
+    element: row.element,
+    tenant: row.tenant,
+    meta: row.meta ?? undefined,
+  };
 }
 
-export async function listApps() {
-    return Array.from(new Set(listOfEvents.map((event) => event.app))).sort((a, b) =>
-        a.localeCompare(b)
-    );
+export async function getLatestEvents(limit = 50): Promise<AnalyticsEvent[]> {
+  const rows = await query<DbEventRow>(
+    `
+      select id, ts, app, type, path, element, tenant, meta
+      from analytics_event
+      order by ts desc
+      limit $1
+    `,
+    [limit]
+  );
+
+  return rows.map(toAnalyticsEvent);
+}
+
+export async function listApps(): Promise<string[]> {
+  const rows = await query<{ app: string }>(
+    `
+      select distinct app
+      from analytics_event
+      order by app asc
+    `
+  );
+  return rows.map((row) => row.app);
+}
+
+export async function listTenants(): Promise<string[]> {
+  const rows = await query<{ tenant: string }>(
+    `
+      select distinct tenant
+      from analytics_event
+      where tenant is not null and tenant <> ''
+      order by tenant asc
+    `
+  );
+  return rows.map((row) => row.tenant);
 }
 
 export async function getAppViewsSummary(params: {
-    from: Date;
-    to: Date;
+  from: Date;
+  to: Date;
 }): Promise<AppViewsSummary[]> {
-    const { from, to } = params;
-    const counts = new Map<string, number>();
+  const rows = await query<{ app: string; total_views: number }>(
+    `
+      select
+        app,
+        count(*)::int as total_views
+      from analytics_event
+      where type = 'page_view'
+        and ts >= $1::timestamptz
+        and ts < $2::timestamptz
+      group by app
+      order by total_views desc, app asc
+    `,
+    [params.from.toISOString(), params.to.toISOString()]
+  );
 
-    for (const event of listOfEvents) {
-        const ts = new Date(event.ts);
-        if (Number.isNaN(ts.getTime())) continue;
-        if (ts < from || ts >= to) continue;
-        if (event.type !== "page_view") continue;
-
-        counts.set(event.app, (counts.get(event.app) ?? 0) + 1);
-    }
-
-    const apps = await listApps();
-    return apps
-        .map((app) => ({
-            app,
-            totalViews: counts.get(app) ?? 0,
-        }))
-        .sort((a, b) => b.totalViews - a.totalViews || a.app.localeCompare(b.app));
-}
-
-export async function getPageViewsByDayByApp(params: {
-    from: Date;
-    to: Date;
-}): Promise<PageViewsByDayAppRow[]> {
-    const { from, to } = params;
-    const counts = new Map<string, number>();
-
-    for (const event of listOfEvents) {
-        if (event.type !== "page_view") continue;
-
-        const ts = new Date(event.ts);
-        if (Number.isNaN(ts.getTime())) continue;
-        if (ts < from || ts >= to) continue;
-
-        const day = event.ts.slice(0, 10);
-        const key = `${day}::${event.app}`;
-        counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-
-    return Array.from(counts.entries())
-        .map(([key, views]) => {
-            const [day, app] = key.split("::");
-            return { day, app, views };
-        })
-        .sort((a, b) => a.day.localeCompare(b.day) || a.app.localeCompare(b.app));
-}
-
-export async function listTenants() {
-    return Array.from(
-        new Set(
-            listOfEvents
-                .map((event) => event.tenant)
-                .filter((tenant): tenant is string => Boolean(tenant))
-        )
-    ).sort((a, b) => a.localeCompare(b));
+  return rows.map((row) => ({ app: row.app, totalViews: row.total_views }));
 }
 
 export async function getTenantViewsSummary(params: {
-    from: Date;
-    to: Date;
+  from: Date;
+  to: Date;
 }): Promise<TenantViewsSummary[]> {
-    const { from, to } = params;
-    const counts = new Map<string, number>();
+  const rows = await query<{ tenant: string; total_views: number }>(
+    `
+      select
+        tenant,
+        count(*)::int as total_views
+      from analytics_event
+      where type = 'page_view'
+        and tenant is not null
+        and tenant <> ''
+        and ts >= $1::timestamptz
+        and ts < $2::timestamptz
+      group by tenant
+      order by total_views desc, tenant asc
+    `,
+    [params.from.toISOString(), params.to.toISOString()]
+  );
 
-    for (const event of listOfEvents) {
-        const ts = new Date(event.ts);
-        if (Number.isNaN(ts.getTime())) continue;
-        if (ts < from || ts >= to) continue;
-        if (event.type !== "page_view") continue;
-        if (!event.tenant) continue;
+  return rows.map((row) => ({ tenant: row.tenant, totalViews: row.total_views }));
+}
 
-        counts.set(event.tenant, (counts.get(event.tenant) ?? 0) + 1);
-    }
-
-    const tenants = await listTenants();
-    return tenants
-        .map((tenant) => ({
-            tenant,
-            totalViews: counts.get(tenant) ?? 0,
-        }))
-        .sort((a, b) => b.totalViews - a.totalViews || a.tenant.localeCompare(b.tenant));
+export async function getPageViewsByDayByApp(params: {
+  from: Date;
+  to: Date;
+}): Promise<PageViewsByDayAppRow[]> {
+  return query<PageViewsByDayAppRow>(
+    `
+      select
+        date_trunc('day', ts)::date::text as day,
+        app,
+        count(*)::int as views
+      from analytics_event
+      where type = 'page_view'
+        and ts >= $1::timestamptz
+        and ts < $2::timestamptz
+      group by 1, 2
+      order by 1 asc, 2 asc
+    `,
+    [params.from.toISOString(), params.to.toISOString()]
+  );
 }
 
 export async function getAppDashboardSummary(params: {
-    app: string;
-    from: Date;
-    to: Date;
+  app: string;
+  from: Date;
+  to: Date;
 }): Promise<AppDashboardSummary> {
-    const { app, from, to } = params;
-    const filtered = listOfEvents
-        .filter((event) => {
-            if (event.app !== app) return false;
-            const ts = new Date(event.ts);
-            if (Number.isNaN(ts.getTime())) return false;
-            return ts >= from && ts < to;
-        })
-        .sort((a, b) => (a.ts > b.ts ? -1 : 1));
+  const values = [params.app, params.from.toISOString(), params.to.toISOString()];
 
-    const pathCounts = new Map<string, number>();
-    const elementCounts = new Map<string, number>();
-    const tenants = new Set<string>();
+  const [counts] = await query<{
+    total_events: number;
+    page_views: number;
+    button_clicks: number;
+    searches: number;
+    unique_tenants: number;
+  }>(
+    `
+      select
+        count(*)::int as total_events,
+        count(*) filter (where type = 'page_view')::int as page_views,
+        count(*) filter (where type = 'button_click')::int as button_clicks,
+        count(*) filter (where type = 'search')::int as searches,
+        count(distinct tenant)::int as unique_tenants
+      from analytics_event
+      where app = $1
+        and ts >= $2::timestamptz
+        and ts < $3::timestamptz
+    `,
+    values
+  );
 
-    let pageViews = 0;
-    let buttonClicks = 0;
-    let searches = 0;
+  const [topPaths, topElements, latestEvents] = await Promise.all([
+    query<{ value: string; events: number }>(
+      `
+        select path as value, count(*)::int as events
+        from analytics_event
+        where app = $1
+          and path is not null
+          and ts >= $2::timestamptz
+          and ts < $3::timestamptz
+        group by path
+        order by events desc, value asc
+        limit 10
+      `,
+      values
+    ),
+    query<{ value: string; events: number }>(
+      `
+        select element as value, count(*)::int as events
+        from analytics_event
+        where app = $1
+          and element is not null
+          and ts >= $2::timestamptz
+          and ts < $3::timestamptz
+        group by element
+        order by events desc, value asc
+        limit 10
+      `,
+      values
+    ),
+    query<DbEventRow>(
+      `
+        select id, ts, app, type, path, element, tenant, meta
+        from analytics_event
+        where app = $1
+          and ts >= $2::timestamptz
+          and ts < $3::timestamptz
+        order by ts desc
+        limit 15
+      `,
+      values
+    ),
+  ]);
 
-    for (const event of filtered) {
-        if (event.type === "page_view") pageViews += 1;
-        if (event.type === "button_click") buttonClicks += 1;
-        if (event.type === "search") searches += 1;
-
-        if (event.path) {
-            pathCounts.set(event.path, (pathCounts.get(event.path) ?? 0) + 1);
-        }
-
-        if (event.element) {
-            elementCounts.set(event.element, (elementCounts.get(event.element) ?? 0) + 1);
-        }
-
-        if (event.tenant) {
-            tenants.add(event.tenant);
-        }
-    }
-
-    const toTopRows = (entries: Map<string, number>) =>
-        Array.from(entries.entries())
-            .map(([value, events]) => ({ value, events }))
-            .sort((a, b) => b.events - a.events || a.value.localeCompare(b.value))
-            .slice(0, 10);
-
-    return {
-        app,
-        totalEvents: filtered.length,
-        pageViews,
-        buttonClicks,
-        searches,
-        uniqueTenants: tenants.size,
-        topPaths: toTopRows(pathCounts),
-        topElements: toTopRows(elementCounts),
-        latestEvents: filtered.slice(0, 15),
-    };
+  return {
+    app: params.app,
+    totalEvents: counts?.total_events ?? 0,
+    pageViews: counts?.page_views ?? 0,
+    buttonClicks: counts?.button_clicks ?? 0,
+    searches: counts?.searches ?? 0,
+    uniqueTenants: counts?.unique_tenants ?? 0,
+    topPaths,
+    topElements,
+    latestEvents: latestEvents.map(toAnalyticsEvent),
+  };
 }
 
 export async function getTenantDashboardSummary(params: {
-    tenant: string;
-    from: Date;
-    to: Date;
+  tenant: string;
+  from: Date;
+  to: Date;
 }): Promise<TenantDashboardSummary> {
-    const { tenant, from, to } = params;
-    const filtered = listOfEvents
-        .filter((event) => {
-            if (event.tenant !== tenant) return false;
-            const ts = new Date(event.ts);
-            if (Number.isNaN(ts.getTime())) return false;
-            return ts >= from && ts < to;
-        })
-        .sort((a, b) => (a.ts > b.ts ? -1 : 1));
+  const values = [params.tenant, params.from.toISOString(), params.to.toISOString()];
 
-    const pathCounts = new Map<string, number>();
-    const elementCounts = new Map<string, number>();
-    const apps = new Set<string>();
+  const [counts] = await query<{
+    total_events: number;
+    page_views: number;
+    button_clicks: number;
+    searches: number;
+    unique_apps: number;
+  }>(
+    `
+      select
+        count(*)::int as total_events,
+        count(*) filter (where type = 'page_view')::int as page_views,
+        count(*) filter (where type = 'button_click')::int as button_clicks,
+        count(*) filter (where type = 'search')::int as searches,
+        count(distinct app)::int as unique_apps
+      from analytics_event
+      where tenant = $1
+        and ts >= $2::timestamptz
+        and ts < $3::timestamptz
+    `,
+    values
+  );
 
-    let pageViews = 0;
-    let buttonClicks = 0;
-    let searches = 0;
+  const [topPaths, topElements, latestEvents] = await Promise.all([
+    query<{ value: string; events: number }>(
+      `
+        select path as value, count(*)::int as events
+        from analytics_event
+        where tenant = $1
+          and path is not null
+          and ts >= $2::timestamptz
+          and ts < $3::timestamptz
+        group by path
+        order by events desc, value asc
+        limit 10
+      `,
+      values
+    ),
+    query<{ value: string; events: number }>(
+      `
+        select element as value, count(*)::int as events
+        from analytics_event
+        where tenant = $1
+          and element is not null
+          and ts >= $2::timestamptz
+          and ts < $3::timestamptz
+        group by element
+        order by events desc, value asc
+        limit 10
+      `,
+      values
+    ),
+    query<DbEventRow>(
+      `
+        select id, ts, app, type, path, element, tenant, meta
+        from analytics_event
+        where tenant = $1
+          and ts >= $2::timestamptz
+          and ts < $3::timestamptz
+        order by ts desc
+        limit 15
+      `,
+      values
+    ),
+  ]);
 
-    for (const event of filtered) {
-        if (event.type === "page_view") pageViews += 1;
-        if (event.type === "button_click") buttonClicks += 1;
-        if (event.type === "search") searches += 1;
-
-        if (event.path) {
-            pathCounts.set(event.path, (pathCounts.get(event.path) ?? 0) + 1);
-        }
-
-        if (event.element) {
-            elementCounts.set(event.element, (elementCounts.get(event.element) ?? 0) + 1);
-        }
-
-        apps.add(event.app);
-    }
-
-    const toTopRows = (entries: Map<string, number>) =>
-        Array.from(entries.entries())
-            .map(([value, events]) => ({ value, events }))
-            .sort((a, b) => b.events - a.events || a.value.localeCompare(b.value))
-            .slice(0, 10);
-
-    return {
-        tenant,
-        totalEvents: filtered.length,
-        pageViews,
-        buttonClicks,
-        searches,
-        uniqueApps: apps.size,
-        topPaths: toTopRows(pathCounts),
-        topElements: toTopRows(elementCounts),
-        latestEvents: filtered.slice(0, 15),
-    };
+  return {
+    tenant: params.tenant,
+    totalEvents: counts?.total_events ?? 0,
+    pageViews: counts?.page_views ?? 0,
+    buttonClicks: counts?.button_clicks ?? 0,
+    searches: counts?.searches ?? 0,
+    uniqueApps: counts?.unique_apps ?? 0,
+    topPaths,
+    topElements,
+    latestEvents: latestEvents.map(toAnalyticsEvent),
+  };
 }
-const listOfEvents: AnalyticsEvent[] = [];
-let nextId = 1;
-function toAnalyticsEvent(e: IncomingEvent): AnalyticsEvent {
-    return {
-        id: nextId++,
-        ts: e.ts ?? new Date().toISOString(),
-        app: e.app,
-        type: e.type,
-        path: e.path ?? null,
-        element: e.element ?? null,
-        tenant: e.tenant ?? null,
-        meta: e.meta,
-    };
-}
-export async function insertEvents(newEvents: IncomingEvent[]) {
-    if (newEvents.length === 0) return;
 
-    // ✅ push *events*, not the array
-    listOfEvents.push(...newEvents.map(toAnalyticsEvent));
+export async function insertEvents(events: IncomingEvent[]) {
+  if (events.length === 0) return;
+
+  const values: unknown[] = [];
+  const rowsSql = events
+    .map((event, i) => {
+      const base = i * 7;
+      values.push(
+        event.ts ?? null,
+        event.app,
+        event.type,
+        event.path ?? null,
+        event.element ?? null,
+        event.tenant ?? null,
+        event.meta ? JSON.stringify(event.meta) : null
+      );
+
+      return `(
+        coalesce($${base + 1}::timestamptz, now()),
+        $${base + 2}::text,
+        $${base + 3}::text,
+        $${base + 4}::text,
+        $${base + 5}::text,
+        $${base + 6}::text,
+        $${base + 7}::jsonb
+      )`;
+    })
+    .join(",");
+
+  await query(
+    `
+      insert into analytics_event (ts, app, type, path, element, tenant, meta)
+      values ${rowsSql}
+    `,
+    values
+  );
 }
-// export async function insertEvents(events: IncomingEvent[]) {
-//     if (events.length === 0) return;
-//
-//     const values: unknown[] = [];
-//
-//     const rowsSql = events
-//         .map((e, i) => {
-//             const base = i * 7; // 👈 now 7 columns
-//
-//             values.push(
-//                 e.ts ?? null,
-//                 e.app,
-//                 e.type,
-//                 e.path ?? null,
-//                 e.element ?? null,
-//                 e.tenant ?? null,
-//                 e.meta ? JSON.stringify(e.meta) : null
-//             );
-//
-//             return `(
-//         coalesce($${base + 1}::timestamptz, now()),
-//         $${base + 2}::text,
-//         $${base + 3}::text,
-//         $${base + 4}::text,
-//         $${base + 5}::text,
-//         $${base + 6}::text,
-//         $${base + 7}::jsonb
-//       )`;
-//         })
-//         .join(",");
-//
-//     await db().query(
-//         `insert into analytics_event (ts, app, type, path, element, tenant, meta)
-//          values ${rowsSql}`,
-//         values
-//     );
-// }

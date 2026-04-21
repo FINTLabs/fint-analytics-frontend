@@ -8,6 +8,9 @@ spec:
   orgId: fintlabs.no
   image: ghcr.io/fintlabs/fint-analytics-frontend
   imagePullPolicy: Always
+  database:
+    enabled: true
+    database: fint-core
   env:
     - name: ANALYTICS_TOKEN
       value: change-me

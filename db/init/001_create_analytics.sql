@@ -2,10 +2,10 @@ create table if not exists analytics_event (
                                                id bigserial primary key,
                                                ts timestamptz not null default now(),
     app text not null,
-    type text not null,          -- 'page_view' | 'click'
+    type text not null,
     path text null,
     element text null,
-    tenant text null
+    tenant text null,
     meta jsonb null
     );
 
