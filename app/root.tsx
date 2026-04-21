@@ -36,7 +36,7 @@ export default function App() {
         <Page footer={<Footer />}>
           <Header />
 
-          <Page.Block as="main" width="xl" gutters>
+          <Page.Block as="main" width="2xl" gutters>
             <Outlet />
           </Page.Block>
         </Page>
