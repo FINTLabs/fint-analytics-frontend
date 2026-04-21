@@ -88,7 +88,7 @@ jobs:
         uses: azure/k8s-bake@v2
         with:
           renderEngine: "kustomize"
-          kustomizationPath: "kustomize/overlays/${{ steps.environment.outputs.result }}/${{ matrix.org }}"
+          kustomizationPath: 'kustomize/overlays/${{ steps.environment.outputs.result }}'
 
       - name: Substitute image into baked YAML
         id: substitute
