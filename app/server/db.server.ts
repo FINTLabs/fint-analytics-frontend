@@ -3,6 +3,8 @@ import { Pool } from "pg";
 declare global {
     // eslint-disable-next-line no-var
     var __dbPool: Pool | undefined;
+    // eslint-disable-next-line no-var
+    var __dbInitPromise: Promise<void> | undefined;
 }
 
 function getEnv(...keys: string[]): string | undefined {
@@ -70,7 +72,42 @@ export function db() {
     return global.__dbPool;
 }
 
+async function ensureDbInitialized() {
+    if (!global.__dbInitPromise) {
+        global.__dbInitPromise = (async () => {
+            const pool = db();
+            await pool.query(`
+                create table if not exists analytics_event (
+                    id bigserial primary key,
+                    ts timestamptz not null default now(),
+                    app text not null,
+                    type text not null,
+                    path text null,
+                    element text null,
+                    tenant text null,
+                    meta jsonb null
+                );
+            `);
+            await pool.query(
+                "create index if not exists analytics_event_ts_idx on analytics_event (ts)"
+            );
+            await pool.query(
+                "create index if not exists analytics_event_app_ts_idx on analytics_event (app, ts)"
+            );
+            await pool.query(
+                "create index if not exists analytics_event_type_ts_idx on analytics_event (type, ts)"
+            );
+            await pool.query(
+                "create index if not exists analytics_event_path_idx on analytics_event (path)"
+            );
+        })();
+    }
+
+    await global.__dbInitPromise;
+}
+
 export async function query<T>(text: string, params: unknown[] = []): Promise<T[]> {
+    await ensureDbInitialized();
     const result = await db().query(text, params);
     return result.rows as T[];
 }
