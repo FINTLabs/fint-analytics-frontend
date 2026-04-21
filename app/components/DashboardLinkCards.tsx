@@ -27,16 +27,6 @@ export default function DashboardLinkCards({
       style={{ marginBottom: 16 }}
     >
       {items.map((item) => (
-        // <InfoCard key={item.title} data-color={item.color}>
-        //   <InfoCard.Header>
-        //     <InfoCard.Title>{item.title}</InfoCard.Title>
-        //   </InfoCard.Header>
-        //   <InfoCard.Content>
-        //     <Heading size="large" level="3" spacing align="center">
-        //       {item.content}
-        //     </Heading>
-        //   </InfoCard.Content>
-        // </InfoCard>
         <LinkCard id={item.title} key={item.title}>
           <Box
             asChild
