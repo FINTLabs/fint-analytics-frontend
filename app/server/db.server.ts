@@ -7,9 +7,23 @@ declare global {
 
 export function db() {
     if (!global.__dbPool) {
-        const connectionString = process.env.DATABASE_URL;
-        if (!connectionString) throw new Error("DATABASE_URL is not set");
-        global.__dbPool = new Pool({ connectionString });
+        const connectionString =
+            process.env.DATABASE_URL ??
+            process.env["fint.database.url"]?.replace(/^jdbc:/, "");
+        const user = process.env["fint.database.username"];
+        const password = process.env["fint.database.password"];
+
+        if (!connectionString) {
+            throw new Error(
+                "DATABASE_URL is not set (and no fint.database.url was provided)"
+            );
+        }
+
+        global.__dbPool = new Pool({
+            connectionString,
+            user,
+            password,
+        });
     }
     return global.__dbPool;
 }
