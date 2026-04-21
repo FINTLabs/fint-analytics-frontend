@@ -53,6 +53,16 @@ function getTypeIcon(type: string, fontSize = "1.5rem"): ReactElement {
   }
 }
 
+function formatPath(path?: string | null): string {
+  if (!path) return "-";
+
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
 export default function EventsTable({
   events,
   hideAppColumn = false,
@@ -121,7 +131,7 @@ export default function EventsTable({
               {!hideAppColumn ? (
                 <Table.DataCell>{row.app}</Table.DataCell>
               ) : null}
-              <Table.DataCell>{row.path ?? "-"}</Table.DataCell>
+              <Table.DataCell>{formatPath(row.path)}</Table.DataCell>
               <Table.DataCell>{row.element ?? "-"}</Table.DataCell>
               {!hideTenantColumn ? (
                 <Table.DataCell>{row.tenant ?? "-"}</Table.DataCell>
