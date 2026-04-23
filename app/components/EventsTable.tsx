@@ -137,7 +137,7 @@ export default function EventsTable({
                       id={row.id.toString()}
                     >
                       <Popover.Content>
-                        {JSON.stringify(row.meta, null, 2)}
+                        {JSON.stringify(row.meta)}
                       </Popover.Content>
                     </Popover>
                     <Button
