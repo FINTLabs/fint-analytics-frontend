@@ -3,6 +3,10 @@ import type {
   AnalyticsEvent,
   AppDashboardSummary,
   AppViewsSummary,
+  ErrorCountByAppRow,
+  ErrorCountByDayRow,
+  ErrorCountByTenantRow,
+  ErrorsOverview,
   IncomingEvent,
   PageViewsByDayAppRow,
   TenantDashboardSummary,
@@ -13,6 +17,10 @@ export type {
   AnalyticsEvent,
   AppDashboardSummary,
   AppViewsSummary,
+  ErrorCountByAppRow,
+  ErrorCountByDayRow,
+  ErrorCountByTenantRow,
+  ErrorsOverview,
   EventsByType,
   HitsPerDayByAppRow,
   IncomingEvent,
@@ -319,6 +327,111 @@ export async function getTenantDashboardSummary(params: {
     topPaths,
     topElements,
     latestEvents: latestEvents.map(toAnalyticsEvent),
+  };
+}
+
+export async function getErrorsOverview(params: {
+  from: Date;
+  to: Date;
+  app?: string | null;
+  tenant?: string | null;
+}): Promise<ErrorsOverview> {
+  const values: Array<string | null> = [params.from.toISOString(), params.to.toISOString()];
+  const conditions = [
+    "type = 'error'",
+    "ts >= $1::timestamptz",
+    "ts < $2::timestamptz",
+  ];
+
+  if (params.app) {
+    values.push(params.app);
+    conditions.push(`app = $${values.length}`);
+  }
+
+  if (params.tenant) {
+    values.push(params.tenant);
+    conditions.push(`tenant = $${values.length}`);
+  }
+
+  const whereClause = conditions.join("\n        and ");
+
+  const [counts] = await query<{
+    total_errors: number;
+    unique_apps: number;
+    unique_tenants: number;
+    days_with_errors: number;
+  }>(
+    `
+      select
+        count(*)::int as total_errors,
+        count(distinct app)::int as unique_apps,
+        count(distinct tenant) filter (where tenant is not null and tenant <> '')::int as unique_tenants,
+        count(distinct date_trunc('day', ts))::int as days_with_errors
+      from analytics_event
+      where ${whereClause}
+    `,
+    values
+  );
+
+  const [byDay, byApp, byTenant, latestErrors] = await Promise.all([
+    query<ErrorCountByDayRow>(
+      `
+        select
+          date_trunc('day', ts)::date::text as day,
+          count(*)::int as errors
+        from analytics_event
+        where ${whereClause}
+        group by 1
+        order by 1 desc
+        limit 14
+      `,
+      values
+    ),
+    query<ErrorCountByAppRow>(
+      `
+        select app, count(*)::int as errors
+        from analytics_event
+        where ${whereClause}
+        group by app
+        order by errors desc, app asc
+        limit 10
+      `,
+      values
+    ),
+    query<ErrorCountByTenantRow>(
+      `
+        select tenant, count(*)::int as errors
+        from analytics_event
+        where ${whereClause}
+          and tenant is not null
+          and tenant <> ''
+        group by tenant
+        order by errors desc, tenant asc
+        limit 10
+      `,
+      values
+    ),
+    query<DbEventRow>(
+      `
+        select id, ts, app, type, path, element, tenant, meta
+        from analytics_event
+        where ${whereClause}
+        order by ts desc
+        limit 50
+      `,
+      values
+    ),
+  ]);
+
+  return {
+    totalErrors: counts?.total_errors ?? 0,
+    uniqueApps: counts?.unique_apps ?? 0,
+    uniqueTenants: counts?.unique_tenants ?? 0,
+    daysWithErrors: counts?.days_with_errors ?? 0,
+    byDay,
+    byApp,
+    byTenant,
+    latestErrors: latestErrors.map(toAnalyticsEvent),
   };
 }
 

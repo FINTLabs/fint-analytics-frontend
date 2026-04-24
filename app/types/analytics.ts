@@ -71,6 +71,32 @@ export type TenantViewsSummary = {
   totalViews: number;
 };
 
+export type ErrorCountByDayRow = {
+  day: string;
+  errors: number;
+};
+
+export type ErrorCountByAppRow = {
+  app: string;
+  errors: number;
+};
+
+export type ErrorCountByTenantRow = {
+  tenant: string;
+  errors: number;
+};
+
+export type ErrorsOverview = {
+  totalErrors: number;
+  uniqueApps: number;
+  uniqueTenants: number;
+  daysWithErrors: number;
+  byDay: ErrorCountByDayRow[];
+  byApp: ErrorCountByAppRow[];
+  byTenant: ErrorCountByTenantRow[];
+  latestErrors: AnalyticsEvent[];
+};
+
 export type EventsByType = {
   type: string;
   events: number;

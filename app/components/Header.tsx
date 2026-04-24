@@ -29,6 +29,14 @@ export default function Header() {
             >
               Tenants
             </Button>
+            <Button
+              size="small"
+              variant="tertiary"
+              as="a"
+              href="/dashboard/errors"
+            >
+              Errors
+            </Button>
           </HStack>
         </Box>
       </header>

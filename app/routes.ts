@@ -5,4 +5,5 @@ export default [
   route("api/events", "routes/api.events.ts"),
   route("dashboard/app/:appName?", "routes/dashboard.app.tsx"),
   route("dashboard/tenant/:tenantName?", "routes/dashboard.tenant.tsx"),
+  route("dashboard/errors", "routes/dashboard.errors.tsx"),
 ] satisfies RouteConfig;
