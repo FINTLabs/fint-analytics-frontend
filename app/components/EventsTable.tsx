@@ -4,6 +4,7 @@ import {
   FileCodeIcon,
   FingerButtonIcon,
   MagnifyingGlassCheckmarkIcon,
+  MigrationIcon,
 } from "@navikt/aksel-icons";
 import { type MouseEvent, type ReactElement, useState } from "react";
 import type { AnalyticsEvent } from "~/types/analytics";
@@ -41,6 +42,14 @@ function getTypeIcon(type: string, fontSize = "1.5rem"): ReactElement {
           aria-hidden
           fontSize={fontSize}
           color="var(--ax-bg-meta-purple-strong)"
+        />
+      );
+    case "action":
+      return (
+        <MigrationIcon
+          title="a11y-title"
+          fontSize={fontSize}
+          color="var(--ax-bg-warning-strong)"
         />
       );
     default:
