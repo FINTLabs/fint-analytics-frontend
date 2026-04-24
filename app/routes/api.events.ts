@@ -18,7 +18,7 @@ function corsHeaders(request: Request): Headers {
   return headers;
 }
 
-const ALLOWED_EVENT_TYPES = new Set(["page_view", "button_click", "search", "error"]);
+const ALLOWED_EVENT_TYPES = new Set(["page_view", "button_click", "search", "error", "action"]);
 
 //TODO: check for double events
 export async function loader({ request }: { request: Request }) {
