@@ -330,6 +330,52 @@ export async function getTenantDashboardSummary(params: {
   };
 }
 
+export async function getTenantEventsPage(params: {
+  tenant: string;
+  from: Date;
+  to: Date;
+  page: number;
+  pageSize: number;
+}): Promise<{ totalEvents: number; events: AnalyticsEvent[]; page: number }> {
+  const values = [params.tenant, params.from.toISOString(), params.to.toISOString()];
+
+  const [totalRow] = await query<{ total_events: number }>(
+    `
+      select count(*)::int as total_events
+      from analytics_event
+      where tenant = $1
+        and ts >= $2::timestamptz
+        and ts < $3::timestamptz
+    `,
+    values
+  );
+
+  const totalEvents = totalRow?.total_events ?? 0;
+  const totalPages = totalEvents === 0 ? 1 : Math.ceil(totalEvents / params.pageSize);
+  const page = Math.min(Math.max(1, params.page), totalPages);
+  const offset = (page - 1) * params.pageSize;
+
+  const rows = await query<DbEventRow>(
+    `
+      select id, ts, app, type, path, element, tenant, meta
+      from analytics_event
+      where tenant = $1
+        and ts >= $2::timestamptz
+        and ts < $3::timestamptz
+      order by ts desc
+      limit $4
+      offset $5
+    `,
+    [...values, params.pageSize, offset]
+  );
+
+  return {
+    totalEvents,
+    events: rows.map(toAnalyticsEvent),
+    page,
+  };
+}
+
 export async function getErrorsOverview(params: {
   from: Date;
   to: Date;

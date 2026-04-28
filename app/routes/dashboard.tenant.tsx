@@ -3,6 +3,7 @@ import {
   Box,
   Heading,
   HStack,
+  Pagination,
   Spacer,
   VStack,
 } from "@navikt/ds-react";
@@ -11,9 +12,11 @@ import { useLoaderData, useLocation, useNavigate } from "react-router";
 import {
   getTenantViewsSummary,
   getTenantDashboardSummary,
+  getTenantEventsPage,
   listTenants,
 } from "~/server/analytics.repo";
 import type {
+  AnalyticsEvent,
   TenantDashboardSummary,
   TenantViewsSummary,
 } from "~/types/analytics";
@@ -38,6 +41,9 @@ function formatDateShort(date: Date) {
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const range = parseDashboardRange(url);
+  const rawPage = Number(url.searchParams.get("page"));
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+  const eventsPageSize = 20;
 
   const tenantName = params.tenantName;
 
@@ -59,6 +65,17 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
           to: range.to,
         });
 
+  const pagedEvents =
+    selectedTenant === null
+      ? { totalEvents: 0, page, events: [] as AnalyticsEvent[] }
+      : await getTenantEventsPage({
+          tenant: selectedTenant,
+          from: range.from,
+          to: range.to,
+          page,
+          pageSize: eventsPageSize,
+        });
+
   return {
     tenants,
     tenantViewsSummary,
@@ -66,6 +83,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     selectedTenant,
     range,
     summary,
+    pagedEvents,
+    eventsPageSize,
   };
 };
 
@@ -77,6 +96,8 @@ export default function TenantDashboardRoute() {
     tenantName,
     range,
     summary,
+    pagedEvents,
+    eventsPageSize,
   } = useLoaderData<{
     tenants: string[];
     tenantViewsSummary: TenantViewsSummary[];
@@ -84,6 +105,12 @@ export default function TenantDashboardRoute() {
     selectedTenant: string | null;
     range: DashboardRange;
     summary: TenantDashboardSummary | null;
+    pagedEvents: {
+      totalEvents: number;
+      page: number;
+      events: AnalyticsEvent[];
+    };
+    eventsPageSize: number;
   }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,6 +119,16 @@ export default function TenantDashboardRoute() {
   const periodEndDate = new Date(range.to);
   periodEndDate.setDate(periodEndDate.getDate() - 1);
   const formattedDateRange = `${formatDateShort(range.from)} - ${formatDateShort(periodEndDate)}`;
+  const totalEventPages = Math.max(
+    1,
+    Math.ceil(pagedEvents.totalEvents / eventsPageSize)
+  );
+
+  const goToEventsPage = (nextPage: number) => {
+    const next = new URLSearchParams(location.search);
+    next.set("page", String(nextPage));
+    navigate(`${location.pathname}?${next.toString()}`);
+  };
 
   return (
     <div style={{ paddingBlock: 16 }}>
@@ -112,6 +149,7 @@ export default function TenantDashboardRoute() {
             next.set("preset", selectedRange.preset);
             next.set("from", selectedRange.fromInput);
             next.set("to", selectedRange.toInput);
+            next.set("page", "1");
             navigate(`${location.pathname}?${next.toString()}`);
           }}
         />
@@ -194,13 +232,25 @@ export default function TenantDashboardRoute() {
             style={{ padding: 16 }}
           >
             <Heading level="2" size="medium" spacing>
-              Latest events in selected period
+              Events in selected period
             </Heading>
             <EventsTable
-              events={summary.latestEvents}
+              events={pagedEvents.events}
               hideTenantColumn
               emptyMessage="No events in this period"
             />
+            <HStack justify="space-between" align="center" style={{ marginTop: 12 }}>
+              <BodyLong size="small">
+                Page {pagedEvents.page} of {totalEventPages} ({pagedEvents.totalEvents} events)
+              </BodyLong>
+              <Pagination
+                page={pagedEvents.page}
+                onPageChange={goToEventsPage}
+                count={totalEventPages}
+                size="small"
+                prevNextTexts
+              />
+            </HStack>
           </Box>
         </>
       ) : null}
