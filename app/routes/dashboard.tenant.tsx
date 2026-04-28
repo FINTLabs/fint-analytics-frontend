@@ -21,6 +21,7 @@ import EventsTable from "~/components/EventsTable";
 import DashboardSummaryCards from "~/components/DashboardSummaryCards";
 import DashboardLinkCards from "~/components/DashboardLinkCards";
 import DashboardTopTables from "~/components/DashboardTopTables";
+import TenantViewsBarChart from "~/components/TenantViewsBarChart";
 import DateRangeActionMenu, {
   parseDashboardRange,
 } from "~/components/DateRangeActionMenu";
@@ -121,6 +122,7 @@ export default function TenantDashboardRoute() {
           <BodyLong spacing>
             Total page views by tenant.
           </BodyLong>
+          <TenantViewsBarChart rows={tenantViewsSummary} />
           <DashboardLinkCards
             columns={4}
             items={tenantViewsSummary.map((item) => ({
