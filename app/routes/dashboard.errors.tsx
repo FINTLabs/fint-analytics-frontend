@@ -17,6 +17,13 @@ import { getErrorsOverview } from "~/server/analytics.repo";
 import type { ErrorsOverview } from "~/types/analytics";
 import type { DashboardRange } from "~/types/dashboard";
 
+function formatDateShort(date: Date) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const range = parseDashboardRange(url);
@@ -39,6 +46,9 @@ export default function ErrorsDashboardRoute() {
   }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const periodEndDate = new Date(range.to);
+  periodEndDate.setDate(periodEndDate.getDate() - 1);
+  const formattedDateRange = `${formatDateShort(range.from)} - ${formatDateShort(periodEndDate)}`;
 
   return (
     <div style={{ paddingBlock: 16 }}>
@@ -48,7 +58,7 @@ export default function ErrorsDashboardRoute() {
             Errors dashboard
           </Heading>
           <BodyLong spacing>
-            Error events by app for {range.label.toLowerCase()}.
+            Error events by app for {range.label.toLowerCase()} ({formattedDateRange}).
           </BodyLong>
         </VStack>
         <Spacer />

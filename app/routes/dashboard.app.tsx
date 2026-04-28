@@ -25,6 +25,13 @@ import DateRangeActionMenu, {
 import type { DashboardRange } from "~/types/dashboard";
 import { formatPath } from "~/utils/path";
 
+function formatDateShort(date: Date) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const range = parseDashboardRange(url);
@@ -73,6 +80,9 @@ export default function DashboardRoute() {
   const location = useLocation();
 
   const hasApps = apps.length > 0 || selectedApp !== null;
+  const periodEndDate = new Date(range.to);
+  periodEndDate.setDate(periodEndDate.getDate() - 1);
+  const formattedDateRange = `${formatDateShort(range.from)} - ${formatDateShort(periodEndDate)}`;
 
   return (
     <div style={{ paddingBlock: 16 }}>
@@ -81,7 +91,9 @@ export default function DashboardRoute() {
           <Heading level="1" size="large" spacing>
             {appName ? appName : "App"} dashboard
           </Heading>
-          <BodyLong spacing>Statistics by app for {range.label.toLowerCase()}</BodyLong>
+          <BodyLong spacing>
+            Statistics by app for {range.label.toLowerCase()} ({formattedDateRange}).
+          </BodyLong>
         </VStack>
         <Spacer />
         <DateRangeActionMenu
