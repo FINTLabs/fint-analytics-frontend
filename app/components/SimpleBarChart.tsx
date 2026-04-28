@@ -31,8 +31,8 @@ export default function SimpleBarChart({
   rows,
   title = "Page views per app (last 30 days)",
 }: SimpleBarChartProps) {
-  const appNames = Array.from(new Set(rows.map((row) => row.app))).sort((a, b) =>
-    a.localeCompare(b),
+  const appNames = Array.from(new Set(rows.map((row) => row.app))).sort(
+    (a, b) => a.localeCompare(b),
   );
 
   const dateLabels = Array.from({ length: 30 }, (_, index) => {
@@ -56,34 +56,47 @@ export default function SimpleBarChart({
 
   if (rows.length === 0) {
     return (
-      <Box background="default" borderRadius="8" shadow="dialog" style={{ padding: 16 }}>
+      <Box
+        background="default"
+        borderRadius="8"
+        shadow="dialog"
+        style={{ padding: 16 }}
+      >
         <BodyLong>No page view data for the last 30 days.</BodyLong>
       </Box>
     );
   }
 
   return (
-    <Box background="default" borderRadius="8" shadow="dialog" style={{ padding: 16 }}>
+    <Box
+      background="default"
+      borderRadius="8"
+      shadow="dialog"
+      style={{ padding: 16 }}
+    >
       <Heading level="2" size="medium" spacing>
         {title}
       </Heading>
-      <Box style={{ width: "100%", height: 420 }}>
+      <Box style={{ width: "100%", minWidth: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 16 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="day" interval="preserveStartEnd" />
-          <YAxis allowDecimals={false} width={32} />
-          <Tooltip />
-          <Legend />
-          {appNames.map((app, index) => (
-            <Bar
-              key={app}
-              dataKey={app}
-              fill={CHART_COLORS[index % CHART_COLORS.length]}
-              radius={[4, 4, 0, 0]}
-            />
-          ))}
-        </BarChart>
+          <BarChart
+            data={chartData}
+            margin={{ top: 8, right: 16, left: 8, bottom: 16 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="day" interval="preserveStartEnd" />
+            <YAxis allowDecimals={false} width={32} />
+            <Tooltip />
+            <Legend />
+            {appNames.map((app, index) => (
+              <Bar
+                key={app}
+                dataKey={app}
+                fill={CHART_COLORS[index % CHART_COLORS.length]}
+                radius={[4, 4, 0, 0]}
+              />
+            ))}
+          </BarChart>
         </ResponsiveContainer>
       </Box>
     </Box>
