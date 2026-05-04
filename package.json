@@ -24,13 +24,13 @@
   "devDependencies": {
     "@react-router/dev": "^7.14.2",
     "@tailwindcss/vite": "^4.1.13",
-    "@types/node": "^22",
+    "@types/node": "^25",
     "@types/pg": "^8.16.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "tailwindcss": "^4.1.13",
-    "typescript": "^5.9.2",
-    "vite": "8.0.5",
-    "vite-tsconfig-paths": "^5.1.4"
+    "typescript": "^6.0.3",
+    "vite": "8.0.10",
+    "vite-tsconfig-paths": "^6.1.1"
   }
 }
