@@ -10,8 +10,8 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
-    "@navikt/ds-css": "^8.6.0",
-    "@navikt/ds-react": "^8.6.0",
+    "@navikt/ds-css": "^8.10.3",
+    "@navikt/ds-react": "^8.10.3",
     "@react-router/node": "^7.14.2",
     "@react-router/serve": "^7.14.2",
     "isbot": "^5.1.31",
