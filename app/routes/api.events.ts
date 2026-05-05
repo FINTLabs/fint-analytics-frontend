@@ -1,6 +1,5 @@
 import { data, type ActionFunctionArgs } from "react-router";
 import { insertEvents } from "~/server/analytics.repo";
-import { notifySlackOnErrorSpike } from "~/server/slack-alerts.server";
 import type { IncomingEvent } from "~/types/analytics";
 
 const LOG_PREFIX = "[api/events]";
@@ -127,7 +126,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
   try {
     await insertEvents(events);
-    await notifySlackOnErrorSpike(events);
   } catch (error) {
     console.error(`${LOG_PREFIX} Failed to process events`, {
       ...requestInfo,
