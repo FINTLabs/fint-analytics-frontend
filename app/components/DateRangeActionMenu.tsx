@@ -166,14 +166,14 @@ export default function DateRangeActionMenu({
             This year
           </ActionMenu.Item>
           <ActionMenu.Divider />
-          <ActionMenu.Item
-            onSelect={() => {
-              const today = getRangeForPreset("today");
-              onDateSelected?.({ ...today, preset: "custom", label: "Custom Dates" });
-            }}
-          >
-            Custom Dates
-          </ActionMenu.Item>
+          {/*<ActionMenu.Item*/}
+          {/*  onSelect={() => {*/}
+          {/*    const today = getRangeForPreset("today");*/}
+          {/*    onDateSelected?.({ ...today, preset: "custom", label: "Custom Dates" });*/}
+          {/*  }}*/}
+          {/*>*/}
+          {/*  Custom Dates*/}
+          {/*</ActionMenu.Item>*/}
         </ActionMenu.Group>
       </ActionMenu.Content>
     </ActionMenu>
