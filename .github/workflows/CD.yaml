@@ -18,3 +18,5 @@ jobs:
       contents: read
       packages: write
     secrets: inherit
+    with:
+      namespace: fintlabs-no
